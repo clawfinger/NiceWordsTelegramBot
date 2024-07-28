@@ -46,8 +46,6 @@ func main() {
 	}
 	ticker := time.NewTicker(time.Duration(config.Config.Timeout) * time.Minute)
 
-	log.Print("starting send cycle")
-
 	ctx, cancFunc := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancFunc()
 	for {
@@ -59,6 +57,7 @@ func main() {
 			bot.Send(msg)
 		case <-ctx.Done():
 			log.Print("shutting down")
+			os.Exit(0)
 		}
 	}
 }
