@@ -1,2 +1,4 @@
 build:
 	go build
+
+docker:

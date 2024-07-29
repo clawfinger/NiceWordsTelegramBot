@@ -48,12 +48,17 @@ func main() {
 
 	ctx, cancFunc := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancFunc()
+	lastIdx := 0
 	for {
 		select {
 		case <-ticker.C:
 			log.Print("starting send cycle")
 			rndIdx := rand.Intn(len(words) - 1)
+			for rndIdx == lastIdx {
+				rndIdx = rand.Intn(len(words) - 1)
+			}
 			msg := tgbotapi.NewMessage(config.Config.ChannelID, words[rndIdx])
+			lastIdx = rndIdx
 			bot.Send(msg)
 		case <-ctx.Done():
 			log.Print("shutting down")
