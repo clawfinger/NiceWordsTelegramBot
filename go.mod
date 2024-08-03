@@ -7,4 +7,7 @@ require (
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
 )
 
-require github.com/caarlos0/env/v11 v11.1.0
+require (
+	github.com/caarlos0/env/v11 v11.1.0
+	github.com/robfig/cron/v3 v3.0.1
+)

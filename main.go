@@ -3,13 +3,15 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"log"
+	"net/http"
 	"nicebot/internal/config"
 	"os"
 	"os/signal"
-	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/robfig/cron/v3"
 	"golang.org/x/exp/rand"
 )
 
@@ -35,34 +37,44 @@ func main() {
 	}
 	log.Printf("chat name %s", chat.UserName)
 
-	var words []string
-	jsonRaw, err := os.ReadFile("nicewords.json")
-	if err != nil {
-		log.Panic(err)
-	}
-	err = json.Unmarshal(jsonRaw, &words)
-	if err != nil {
-		log.Panic(err)
-	}
-	ticker := time.NewTicker(time.Duration(config.Config.Timeout) * time.Minute)
-
 	ctx, cancFunc := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancFunc()
+
 	lastIdx := 0
-	for {
-		select {
-		case <-ticker.C:
-			log.Print("starting send cycle")
-			rndIdx := rand.Intn(len(words) - 1)
-			for rndIdx == lastIdx {
-				rndIdx = rand.Intn(len(words) - 1)
-			}
-			msg := tgbotapi.NewMessage(config.Config.ChannelID, words[rndIdx])
-			lastIdx = rndIdx
-			bot.Send(msg)
-		case <-ctx.Done():
-			log.Print("shutting down")
-			os.Exit(0)
+	scheduler := cron.New()
+	scheduler.AddFunc(config.Config.CronSchedule, func() {
+		words, err := getWordsFromPastebin()
+		if err != nil {
+			log.Println(err.Error())
 		}
+
+		rndIdx := rand.Intn(len(words) - 1)
+		for rndIdx == lastIdx {
+			rndIdx = rand.Intn(len(words) - 1)
+		}
+
+		msg := tgbotapi.NewMessage(config.Config.ChannelID, words[rndIdx])
+		lastIdx = rndIdx
+		bot.Send(msg)
+	})
+	scheduler.Start()
+	<-ctx.Done()
+	scheduler.Stop()
+}
+
+func getWordsFromPastebin() ([]string, error) {
+	resp, err := http.Get(config.Config.PastebinUrl)
+	if err != nil {
+		return nil, err
 	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	var words []string
+	err = json.Unmarshal(body, &words)
+	if err != nil {
+		log.Panic(err)
+	}
+	return words, nil
 }
