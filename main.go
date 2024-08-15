@@ -23,26 +23,16 @@ func main() {
 		log.Panic(err)
 	}
 
-	bot.Debug = true
-
 	log.Printf("Authorized on account %s", bot.Self.UserName)
-
-	chat, err := bot.GetChat(tgbotapi.ChatInfoConfig{
-		ChatConfig: tgbotapi.ChatConfig{
-			ChatID: config.Config.ChannelID,
-		},
-	})
-	if err != nil {
-		log.Panic(err)
-	}
-	log.Printf("chat name %s", chat.UserName)
 
 	ctx, cancFunc := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancFunc()
 
+	config.Config.CronSchedule = "0 10 * * *"
+
 	lastIdx := 0
 	scheduler := cron.New()
-	scheduler.AddFunc(config.Config.CronSchedule, func() {
+	_, err = scheduler.AddFunc(config.Config.CronSchedule, func() {
 		words, err := getWordsFromPastebin()
 		if err != nil {
 			log.Println(err.Error())
@@ -57,6 +47,9 @@ func main() {
 		lastIdx = rndIdx
 		bot.Send(msg)
 	})
+	if err != nil {
+		log.Println(err)
+	}
 	scheduler.Start()
 	<-ctx.Done()
 	scheduler.Stop()

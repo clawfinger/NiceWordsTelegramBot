@@ -16,6 +16,5 @@ ENV CRON_SCHEDULE ${CRON_SCHEDULE}
 ENV MSG_TIMEOUT_MINS 1
 
 COPY --from=build /build/nicebot /nicebot
-COPY --from=build /build/nicewords.json /nicewords.json
 
 ENTRYPOINT ["/nicebot"]
